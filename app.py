@@ -18,7 +18,7 @@ def get_base64_image(image_path):
     with open(image_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode()
 
-image_base64 = get_base64_image("F:/RAG chatbot (bw)/robot-assistant.png")
+image_base64 = get_base64_image("robot-assistant.png")
 
 # --- Wake up backend on app load ---
 if "backend_wakeup_triggered" not in st.session_state:

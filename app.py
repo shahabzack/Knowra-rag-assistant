@@ -3,6 +3,7 @@ from datetime import datetime
 from utils.pdf_utils import convert_pdf_to_images
 import requests
 import io
+import os
 
 # Page configuration
 st.set_page_config(
@@ -18,11 +19,11 @@ if "backend_wakeup_triggered" not in st.session_state:
 
 if not st.session_state.backend_wakeup_triggered:
     try:
-        backend_url = f"{st.secrets['BACKEND_URL']}/healthz"
+        backend_url = f"{os.environ['BACKEND_URL']}/healthz"
         response = requests.get(backend_url, timeout=5)
         st.session_state.backend_wakeup_triggered = True
-    except requests.RequestException:
-        pass  # Silently handle if backend is asleep or unreachable
+    except (requests.RequestException, KeyError):
+        pass  # Silently handle if backend is asleep or BACKEND_URL is missing
 
 # Clean, minimal CSS with proper containment
 st.markdown("""
@@ -269,7 +270,7 @@ with st.sidebar:
                 content = uploaded_file.getvalue()
                 files = {"file": (uploaded_file.name, content, "application/pdf")}
                 try:
-                    response = requests.post(f"{st.secrets['BACKEND_URL']}/upload", files=files)
+                    response = requests.post(f"{os.environ['BACKEND_URL']}/upload", files=files)
                     if response.status_code == 200:
                         st.session_state.pdf_processed = True
                         st.session_state.images = convert_pdf_to_images(io.BytesIO(content))
@@ -277,8 +278,8 @@ with st.sidebar:
                         st.success(f"✅ Loaded {len(st.session_state.images)} pages!")
                     else:
                         st.error(f"Backend Error: {response.text}")
-                except requests.RequestException:
-                    st.error("Connection Error: Is the backend server running?")
+                except (requests.RequestException, KeyError):
+                    st.error("Connection Error: Is the backend server running or BACKEND_URL set?")
 
         if st.session_state.pdf_processed:
             total_pages = len(st.session_state.images)
@@ -405,7 +406,7 @@ if uploaded_file and st.session_state.pdf_processed:
                                 "start_page": st.session_state.start_page,
                                 "end_page": st.session_state.end_page
                             }
-                            response = requests.post(f"{st.secrets['BACKEND_URL']}/chat", json=payload)
+                            response = requests.post(f"{os.environ['BACKEND_URL']}/chat", json=payload)
                             if response.status_code == 200:
                                 data = response.json()
                                 answer = data["answer"]
@@ -416,7 +417,7 @@ if uploaded_file and st.session_state.pdf_processed:
                             else:
                                 error_msg = f"❌ Error: {response.text}"
                                 st.session_state.chat_history.append({"role": "assistant", "content": error_msg})
-                        except Exception as e:
+                        except (requests.RequestException, KeyError) as e:
                             error_msg = f"❌ Connection error: {str(e)}"
                             st.session_state.chat_history.append({"role": "assistant", "content": error_msg})
                     

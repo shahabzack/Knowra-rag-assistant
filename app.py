@@ -3,22 +3,14 @@ from datetime import datetime
 from utils.pdf_utils import convert_pdf_to_images
 import requests
 import io
-import base64
 
 # Page configuration
 st.set_page_config(
     page_title="Knowra: Your aura of answers",
     layout="centered",
     initial_sidebar_state="expanded",
-    page_icon="robot-assistant.png"
+    page_icon="📖"
 )
-
-# --- Load image as base64 ---
-def get_base64_image(image_path):
-    with open(image_path, "rb") as img_file:
-        return base64.b64encode(img_file.read()).decode()
-
-image_base64 = get_base64_image("robot-assistant.png")
 
 # --- Wake up backend on app load ---
 if "backend_wakeup_triggered" not in st.session_state:
@@ -385,7 +377,7 @@ if uploaded_file and st.session_state.pdf_processed:
                     <div class="message-wrapper assistant-message-wrapper">
                         <div class="message-bubble assistant-message">
                             <div class="message-header">
-                                <img src="data:image/png;base64,{image_base64}" width="20" style="vertical-align: middle; margin-right: 8px;" />
+                                <span>🤖</span>
                                 <span>Knowra</span>
                             </div>
                             <div>{message["content"]}</div>

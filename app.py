@@ -4,6 +4,7 @@ from utils.pdf_utils import convert_pdf_to_images
 import requests
 import io
 import base64
+
 # Page configuration
 st.set_page_config(
     page_title="Knowra: Your aura of answers",
@@ -18,6 +19,18 @@ def get_base64_image(image_path):
         return base64.b64encode(img_file.read()).decode()
 
 image_base64 = get_base64_image("F:/RAG chatbot (bw)/robot-assistant.png")
+
+# --- Wake up backend on app load ---
+if "backend_wakeup_triggered" not in st.session_state:
+    st.session_state.backend_wakeup_triggered = False
+
+if not st.session_state.backend_wakeup_triggered:
+    try:
+        backend_url = f"{st.secrets['BACKEND_URL']}/healthz"
+        response = requests.get(backend_url, timeout=5)
+        st.session_state.backend_wakeup_triggered = True
+    except requests.RequestException:
+        pass  # Silently handle if backend is asleep or unreachable
 
 # Clean, minimal CSS with proper containment
 st.markdown("""
@@ -128,7 +141,6 @@ st.markdown("""
         padding: 0.75rem 1rem;
         border-radius: 16px;
         box-sizing: border-box;
-        # margin-bottom: 10px;
     }
     
     .user-message { 
@@ -265,7 +277,7 @@ with st.sidebar:
                 content = uploaded_file.getvalue()
                 files = {"file": (uploaded_file.name, content, "application/pdf")}
                 try:
-                    response = requests.post("http://localhost:8000/upload", files=files)
+                    response = requests.post(f"{st.secrets['BACKEND_URL']}/upload", files=files)
                     if response.status_code == 200:
                         st.session_state.pdf_processed = True
                         st.session_state.images = convert_pdf_to_images(io.BytesIO(content))
@@ -401,7 +413,7 @@ if uploaded_file and st.session_state.pdf_processed:
                                 "start_page": st.session_state.start_page,
                                 "end_page": st.session_state.end_page
                             }
-                            response = requests.post("http://localhost:8000/chat", json=payload)
+                            response = requests.post(f"{st.secrets['BACKEND_URL']}/chat", json=payload)
                             if response.status_code == 200:
                                 data = response.json()
                                 answer = data["answer"]

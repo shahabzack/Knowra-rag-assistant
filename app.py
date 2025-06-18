@@ -19,7 +19,7 @@ if "backend_wakeup_triggered" not in st.session_state:
 
 if not st.session_state.backend_wakeup_triggered:
     try:
-        backend_url = f"{os.environ['BACKEND_URL']}/healthz"
+        backend_url = f"{os.environ['BACKEND_URL']}/"
         response = requests.get(backend_url, timeout=5)
         st.session_state.backend_wakeup_triggered = True
     except (requests.RequestException, KeyError):

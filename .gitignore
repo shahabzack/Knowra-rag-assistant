@@ -1,0 +1,18 @@
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+myenv310/
+*.egg-info/
+*.egg
+
+# IDE files
+.idea/
+.vscode/

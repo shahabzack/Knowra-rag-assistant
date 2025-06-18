@@ -18,7 +18,8 @@ app = FastAPI(title="RAG PDF Chatbot API")
 # --- CORS Middleware (for Streamlit frontend) ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Replace with Streamlit domain for production
+    # allow_origins=["*"],
+    allow_origins=["https://knowra.onrender.com"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

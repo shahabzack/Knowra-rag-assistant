@@ -1,10 +1,10 @@
 import streamlit as st
 from datetime import datetime
-from utils.pdf_utils import convert_page_to_image, get_page_count
 import requests
 import os
-import cachetools 
+import cachetools
 from dotenv import load_dotenv
+from utils.pdf_utils import get_page_count
 
 # Page configuration
 st.set_page_config(
@@ -187,15 +187,6 @@ st.markdown("""
         color: #fafafa;
     }
     
-    /* PDF preview */
-    .pdf-preview { 
-        border: 1px solid #2a2a2a; 
-        border-radius: 12px; 
-        padding: 1rem; 
-        background-color: #1e2329; 
-        margin: 1rem 0;
-    }
-    
     /* Welcome container */
     .welcome-container {
         background-color: #1e2329;
@@ -242,12 +233,10 @@ if "pdf_bytes" not in st.session_state:
     st.session_state.preview_mode = "Full Document"
     st.session_state.start_page = 0
     st.session_state.end_page = 0
-    st.session_state.current_page = 0
     st.session_state.chat_history = []
     st.session_state.user_name = ""
     st.session_state.name_prompted = False
     st.session_state.input_value = ""
-    st.session_state.image_cache = cachetools.LRUCache(maxsize=5)
     st.session_state.total_pages = 0
 
 # App header
@@ -269,7 +258,6 @@ with st.sidebar:
             st.session_state.name_prompted = False
             st.session_state.user_name = ""
             st.session_state.input_value = ""
-            st.session_state.image_cache.clear()
             st.session_state.total_pages = get_page_count(st.session_state.pdf_bytes)
 
         if not st.session_state.pdf_processed:
@@ -288,8 +276,8 @@ with st.sidebar:
         if st.session_state.pdf_processed:
             total_pages = st.session_state.total_pages
             st.markdown("**📊 Document Info:**")
-            st.markdown(f"**Pages:** {total_pages}")
             st.markdown(f"**File:** {uploaded_file.name}")
+            st.markdown(f"**Pages:** {total_pages}")
             
             st.divider()
             
@@ -310,9 +298,6 @@ with st.sidebar:
                 st.session_state.start_page = 0
                 st.session_state.end_page = total_pages - 1
 
-            if st.session_state.current_page < st.session_state.start_page or st.session_state.current_page > st.session_state.end_page:
-                st.session_state.current_page = st.session_state.start_page
-
             if not st.session_state.show_chat:
                 if st.button("💬 Start Chat With Your PDF"):
                     st.session_state.show_chat = True
@@ -321,32 +306,8 @@ with st.sidebar:
 # Main content area
 if uploaded_file and st.session_state.pdf_processed:
     if not st.session_state.show_chat:
-        st.markdown('<h2 class="sub-header">📖 Document Preview</h2>', unsafe_allow_html=True)
-        current = st.session_state.current_page
-
-        if current not in st.session_state.image_cache:
-            with st.spinner("Loading page..."):
-                image = convert_page_to_image(st.session_state.pdf_bytes, current)
-                if image:
-                    st.session_state.image_cache[current] = image
-
-        image = st.session_state.image_cache.get(current)
-        if image:
-            st.image(image, use_container_width=True, caption=f"Page {current + 1} of {st.session_state.total_pages}")
-        else:
-            st.error("Failed to load page image.")
-
-        col_prev, col_page, col_next = st.columns([1, 2, 1])
-        with col_prev:
-            if st.button("⬅️ Previous", disabled=(current <= st.session_state.start_page)):
-                st.session_state.current_page -= 1
-                st.rerun()
-        with col_page:
-            st.markdown(f"<p style='text-align: center; padding: 8px; color: #a0a0a0;'>Page {current + 1}</p>", unsafe_allow_html=True)
-        with col_next:
-            if st.button("Next ➡️", disabled=(current >= st.session_state.end_page)):
-                st.session_state.current_page += 1
-                st.rerun()
+        st.markdown('<h2 class="sub-header">📄 Document Ready</h2>', unsafe_allow_html=True)
+        st.markdown(f'<div class="info-box">Your document <strong>{st.session_state.filename}</strong> ({st.session_state.total_pages} pages) is loaded. Click "Start Chat With Your PDF" in the sidebar to begin.</div>', unsafe_allow_html=True)
     else:
         # Prompt for user name before starting chat
         if not st.session_state.name_prompted:
@@ -445,19 +406,20 @@ if uploaded_file and st.session_state.pdf_processed:
                     st.session_state.user_name = ""
                     st.rerun()
             with col2:
-                if st.button("📖 Back to Preview"):
+                if st.button("📖 Back to Document"):
                     st.session_state.show_chat = False
                     st.rerun()
 
 else:
     # Welcome screen
     st.markdown('''
-    <div class="info-box">
-        <h3>🚀 Getting Started</h3>
-        <p><strong>1.</strong> Upload your PDF using the sidebar</p>
-        <p><strong>2.</strong> Choose to analyze the full document or select specific pages</p>
-        <p><strong>3.</strong> Start chatting with your document!</p>
-        <br>
-        <p>💡 <strong>Tip:</strong> For better performance with large PDFs, select only the pages you need.</p>
-    </div>
-    ''', unsafe_allow_html=True)
+<div class="info-box">
+    <h3>🚀 Getting Started</h3>
+    <p><strong>1.</strong> Upload your PDF using the sidebar</p>
+    <p><strong>2.</strong> Choose to analyze the full document or select specific pages</p>
+    <p><strong>3.</strong> Start chatting with your document!</p>
+    <br>
+    <p><strong>⚠️ Note:</strong> Only text-based PDFs are supported for preview. Image-only/scanned PDFs are not supported currently.</p>
+    <p>💡 <strong>Tip:</strong> For better performance with large PDFs, select only the pages you need.</p>
+</div>
+''', unsafe_allow_html=True)

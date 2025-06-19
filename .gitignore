@@ -16,3 +16,5 @@ myenv310/
 # IDE files
 .idea/
 .vscode/
+
+download_model.py

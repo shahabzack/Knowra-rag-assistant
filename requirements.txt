@@ -13,7 +13,6 @@ pymupdf==1.24.5
 pillow==10.3.0
 python-dotenv==1.0.1
 requests==2.31.0
-cachetools
+cachetools==5.3.3
 # ✅ Use CPU-only version of PyTorch
-torch==2.2.2+cpu
---extra-index-url https://download.pytorch.org/whl/cpu
+pip install torch==2.2.2+cpu --extra-index-url https://download.pytorch.org/whl/cpu

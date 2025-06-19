@@ -1,9 +1,10 @@
 import streamlit as st
 from datetime import datetime
-from utils.pdf_utils import convert_pdf_to_images
+from utils.pdf_utils import convert_page_to_image, get_page_count
 import requests
-import io
 import os
+import cachetools 
+from dotenv import load_dotenv
 
 # Page configuration
 st.set_page_config(
@@ -12,6 +13,8 @@ st.set_page_config(
     initial_sidebar_state="expanded",
     page_icon="📖"
 )
+load_dotenv()
+BACKEND_URL = os.getenv("BACKEND_URL")
 
 # --- Wake up backend on app load ---
 if "backend_wakeup_triggered" not in st.session_state:
@@ -19,7 +22,7 @@ if "backend_wakeup_triggered" not in st.session_state:
 
 if not st.session_state.backend_wakeup_triggered:
     try:
-        backend_url = f"{os.environ['BACKEND_URL']}/"
+        backend_url = f"{BACKEND_URL}/"
         response = requests.get(backend_url, timeout=5)
         st.session_state.backend_wakeup_triggered = True
     except (requests.RequestException, KeyError):
@@ -231,8 +234,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Initialize session state
-if "images" not in st.session_state:
-    st.session_state.images = None
+if "pdf_bytes" not in st.session_state:
+    st.session_state.pdf_bytes = None
     st.session_state.filename = None
     st.session_state.pdf_processed = False
     st.session_state.show_chat = False
@@ -244,6 +247,8 @@ if "images" not in st.session_state:
     st.session_state.user_name = ""
     st.session_state.name_prompted = False
     st.session_state.input_value = ""
+    st.session_state.image_cache = cachetools.LRUCache(maxsize=5)
+    st.session_state.total_pages = 0
 
 # App header
 st.markdown('<h1 class="main-header">📖 Knowra: Your aura of answers</h1>', unsafe_allow_html=True)
@@ -256,7 +261,7 @@ with st.sidebar:
 
     if uploaded_file:
         if st.session_state.filename != uploaded_file.name:
-            st.session_state.images = None
+            st.session_state.pdf_bytes = uploaded_file.read()
             st.session_state.filename = uploaded_file.name
             st.session_state.pdf_processed = False
             st.session_state.show_chat = False
@@ -264,25 +269,24 @@ with st.sidebar:
             st.session_state.name_prompted = False
             st.session_state.user_name = ""
             st.session_state.input_value = ""
+            st.session_state.image_cache.clear()
+            st.session_state.total_pages = get_page_count(st.session_state.pdf_bytes)
 
         if not st.session_state.pdf_processed:
             with st.spinner("Processing PDF..."):
-                content = uploaded_file.getvalue()
-                files = {"file": (uploaded_file.name, content, "application/pdf")}
                 try:
+                    files = {"file": (uploaded_file.name, st.session_state.pdf_bytes, "application/pdf")}
                     response = requests.post(f"{os.environ['BACKEND_URL']}/upload", files=files)
                     if response.status_code == 200:
                         st.session_state.pdf_processed = True
-                        st.session_state.images = convert_pdf_to_images(io.BytesIO(content))
-                        st.session_state.end_page = len(st.session_state.images) - 1
-                        st.success(f"✅ Loaded {len(st.session_state.images)} pages!")
+                        st.success(f"✅ Loaded {st.session_state.total_pages} pages!")
                     else:
                         st.error(f"Backend Error: {response.text}")
                 except (requests.RequestException, KeyError):
                     st.error("Connection Error: Is the backend server running or BACKEND_URL set?")
 
         if st.session_state.pdf_processed:
-            total_pages = len(st.session_state.images)
+            total_pages = st.session_state.total_pages
             st.markdown("**📊 Document Info:**")
             st.markdown(f"**Pages:** {total_pages}")
             st.markdown(f"**File:** {uploaded_file.name}")
@@ -319,9 +323,18 @@ if uploaded_file and st.session_state.pdf_processed:
     if not st.session_state.show_chat:
         st.markdown('<h2 class="sub-header">📖 Document Preview</h2>', unsafe_allow_html=True)
         current = st.session_state.current_page
-        image = st.session_state.images[current]
 
-        st.image(image, use_container_width=True, caption=f"Page {current + 1} of {len(st.session_state.images)}")
+        if current not in st.session_state.image_cache:
+            with st.spinner("Loading page..."):
+                image = convert_page_to_image(st.session_state.pdf_bytes, current)
+                if image:
+                    st.session_state.image_cache[current] = image
+
+        image = st.session_state.image_cache.get(current)
+        if image:
+            st.image(image, use_container_width=True, caption=f"Page {current + 1} of {st.session_state.total_pages}")
+        else:
+            st.error("Failed to load page image.")
 
         col_prev, col_page, col_next = st.columns([1, 2, 1])
         with col_prev:
@@ -353,7 +366,7 @@ if uploaded_file and st.session_state.pdf_processed:
             # Chat Interface
             st.markdown('<h4 class="sub-header">💬 Chat with Your Document</h4>', unsafe_allow_html=True)
             
-            range_text = f"pages {st.session_state.start_page + 1} to {st.session_state.end_page + 1}" if st.session_state.preview_mode == "Page Range" else f"entire document ({len(st.session_state.images)} pages)"
+            range_text = f"pages {st.session_state.start_page + 1} to {st.session_state.end_page + 1}" if st.session_state.preview_mode == "Page Range" else f"entire document ({st.session_state.total_pages} pages)"
             st.markdown(f'<p class="info-box"><strong>{st.session_state.filename}</strong> • {range_text}</p>', unsafe_allow_html=True)
 
             # Display chat history

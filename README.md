@@ -156,15 +156,18 @@ The following diagram illustrates the data flow in Knowra, from PDF upload to an
 
 ```mermaid
 graph TD
-     A[User] -->|Uploads PDF| B[Streamlit Frontend]
-    B -->|Sends PDF| C[FastAPI Backend]
-    C -->|Processes PDF into Text| D[Text Storage]
-    A -->|Asks Question| B
-    B -->|Sends Question| C
-    C -->|Finds Relevant Text| D
-    D -->|Generates Answer| E[Gemini AI]
-    C -->|Returns Answer| B
-    B -->|Shows Answer| A
+    A[🧑 User] -->|📄 Uploads PDF| B[🖥️ Streamlit Frontend]
+    B -->|➡️ Sends PDF| C[⚙️ FastAPI Backend]
+    C -->|📄 Extracts Text| D[🧾 PDF Processing (PyPDF + PyMuPDF)]
+    D -->|✂️ Split + Embed + Store| E[📦 FAISS Vector Store]
+
+    A -->|❓ Asks Question| B
+    B -->|➡️ Sends Question| C
+    C -->|🔍 Retrieves Chunks (Top 7)| E
+    E -->|🧠 Context| F[🤖 Gemini AI]
+    F -->|💬 Answer| C
+    C -->|⬅️ Returns Answer| B
+    B -->|📃 Shows Answer| A
 ```
 
 **Explanation**:

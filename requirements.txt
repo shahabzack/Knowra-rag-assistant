@@ -15,4 +15,4 @@ python-dotenv==1.0.1
 requests==2.31.0
 cachetools==5.3.3
 # ✅ Use CPU-only version of PyTorch
-pip install torch==2.2.2+cpu --extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.2.2+cpu

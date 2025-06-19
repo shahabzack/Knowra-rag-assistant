@@ -22,6 +22,7 @@
   - [Start the Backend](#start-the-backend)
   - [Start the Frontend](#start-the-frontend)
 - [Usage](#usage)
+- [Workflow](#workflow)
 - [Limitations](#limitations)
 - [License](#license)
 
@@ -150,9 +151,41 @@ cd knowra
 5. **Manage Chat**:
    - Clear the chat or return to document settings using the buttons provided.
 
+## Workflow
+The following diagram illustrates the data flow in Knowra, from PDF upload to answer generation:
+
+```mermaid
+graph TD
+    A[User] -->|Uploads PDF| B[Streamlit Frontend]
+    B -->|Sends PDF to /upload| C[FastAPI Backend]
+    C -->|Extracts Text| D[PyPDFLoader]
+    C -->|Counts Pages| E[PyMuPDF]
+    D -->|Splits into Chunks| F[RecursiveCharacterTextSplitter]
+    F -->|Creates Embeddings| G[HuggingFace all-MiniLM-L6-v2]
+    G -->|Stores Chunks| H[FAISS Vector Store]
+    A -->|Asks Question| B
+    B -->|Sends Question to /chat| C
+    C -->|Retrieves Relevant Chunks| H
+    H -->|Filters by Page Range| I[PageFilteredRetriever]
+    I -->|Sends Context| J[Gemini LLM]
+    J -->|Generates Answer| C
+    C -->|Returns Answer & Pages| B
+    B -->|Displays Answer| A
+```
+
+**Explanation**:
+1. The user uploads a PDF via the Streamlit frontend.
+2. The frontend sends the PDF to the FastAPI backend’s `/upload` endpoint.
+3. The backend uses `PyPDFLoader` to extract text and `PyMuPDF` to count pages.
+4. Text is split into chunks using `RecursiveCharacterTextSplitter`.
+5. Chunks are embedded using `all-MiniLM-L6-v2` and stored in a FAISS vector store.
+6. The user asks a question, which the frontend sends to the `/chat` endpoint.
+7. The backend retrieves relevant chunks from FAISS, filtered by the selected page range.
+8. The Gemini LLM generates an answer based on the retrieved chunks.
+9. The answer and source page numbers are returned to the frontend and displayed to the user.
+
 ## Limitations
 - **PDF Support**: Only text-based PDFs are supported. Image-based or scanned PDFs are not compatible.
-
 
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

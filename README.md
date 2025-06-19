@@ -21,11 +21,8 @@
 - [Running the Application Locally](#running-the-application-locally)
   - [Start the Backend](#start-the-backend)
   - [Start the Frontend](#start-the-frontend)
-- [Deploying on Render](#deploying-on-render)
 - [Usage](#usage)
 - [Limitations](#limitations)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
 - [License](#license)
 
 ## Overview
